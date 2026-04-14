@@ -16,7 +16,10 @@ class Conversations::PermissionFilterService
   private
 
   def accessible_conversations
-    conversations.where(inbox: user.inboxes.where(account_id: account.id))
+    scope = conversations.where(inbox: user.inboxes.where(account_id: account.id))
+    return scope unless account_user&.restricted_to_teams?
+
+    scope.where(team_id: account_user.allowed_team_ids)
   end
 
   def account_user

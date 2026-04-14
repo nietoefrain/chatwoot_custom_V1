@@ -26,6 +26,22 @@ describe('Conversation Helpers', () => {
       },
     };
 
+    const conversationForSalesTeam = {
+      meta: {
+        assignee: null,
+        team: {
+          id: 7,
+        },
+      },
+    };
+
+    const conversationWithoutTeam = {
+      meta: {
+        assignee: null,
+        team: null,
+      },
+    };
+
     // Test for administrator role
     it('always returns true for administrator role regardless of permissions', () => {
       const role = 'administrator';
@@ -87,6 +103,36 @@ describe('Conversation Helpers', () => {
           permissions,
           currentUserId
         )
+      ).toBe(true);
+    });
+
+    it('returns false for restricted agents when the conversation team is not allowed', () => {
+      expect(
+        applyRoleFilter(conversationForSalesTeam, 'agent', [], 1, {
+          role: 'agent',
+          allowed_team_ids: [5],
+          support_team_member: false,
+        })
+      ).toBe(false);
+    });
+
+    it('returns false for restricted agents when the conversation has no team', () => {
+      expect(
+        applyRoleFilter(conversationWithoutTeam, 'agent', [], 1, {
+          role: 'agent',
+          allowed_team_ids: [5],
+          support_team_member: false,
+        })
+      ).toBe(false);
+    });
+
+    it('returns true for support team members even when allowed_team_ids is present', () => {
+      expect(
+        applyRoleFilter(conversationForSalesTeam, 'agent', [], 1, {
+          role: 'agent',
+          allowed_team_ids: [5],
+          support_team_member: true,
+        })
       ).toBe(true);
     });
 

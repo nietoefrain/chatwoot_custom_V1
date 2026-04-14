@@ -9,7 +9,8 @@ class AgentBuilder
   # @param inviter [User] the user who is inviting the agent (Current.user in most cases).
   # @param availability [String] the availability status of the user, defaults to 'offline' if not provided.
   # @param auto_offline [Boolean] the auto offline status of the user.
-  pattr_initialize [:email, { name: '' }, :inviter, :account, { role: :agent }, { availability: :offline }, { auto_offline: false }]
+  pattr_initialize [:email, { name: '' }, :inviter, :account, { role: :agent }, { availability: :offline }, { auto_offline: false },
+                    { allowed_team_ids: [] }]
 
   # Creates a user and account user in a transaction.
   # @return [User] the created user.
@@ -48,7 +49,8 @@ class AgentBuilder
     }.merge({
       role: role,
       availability: availability,
-      auto_offline: auto_offline
+      auto_offline: auto_offline,
+      allowed_team_ids: allowed_team_ids
     }.compact))
   end
 end

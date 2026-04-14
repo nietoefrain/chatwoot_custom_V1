@@ -414,6 +414,121 @@ describe('#getters', () => {
       ]);
     });
 
+    it('filters conversations based on allowed_team_ids for restricted agents', () => {
+      const state = {
+        allConversations: [
+          {
+            id: 1,
+            status: 'open',
+            meta: { assignee: { id: 1 }, team: { id: 5 } },
+            last_activity_at: 1000,
+          },
+          {
+            id: 2,
+            status: 'open',
+            meta: { team: { id: 6 } },
+            last_activity_at: 2000,
+          },
+          {
+            id: 3,
+            status: 'open',
+            meta: {},
+            last_activity_at: 3000,
+          },
+        ],
+        chatSortFilter: 'last_activity_at_desc',
+        appliedFilters: [],
+      };
+
+      const rootGetters = {
+        ...mockRootGetters,
+        getCurrentAccount: {
+          id: 1,
+          role: 'agent',
+          permissions: [],
+          allowed_team_ids: [5],
+          support_team_member: false,
+        },
+        getCurrentUser: {
+          ...mockRootGetters.getCurrentUser,
+          accounts: [
+            {
+              id: 1,
+              role: 'agent',
+              permissions: [],
+              allowed_team_ids: [5],
+              support_team_member: false,
+            },
+          ],
+        },
+      };
+
+      const result = getters.getFilteredConversations(
+        state,
+        {},
+        {},
+        rootGetters
+      );
+
+      expect(result).toEqual([state.allConversations[0]]);
+    });
+
+    it('does not restrict support team members in all conversations', () => {
+      const state = {
+        allConversations: [
+          {
+            id: 1,
+            status: 'open',
+            meta: { team: { id: 5 } },
+            last_activity_at: 1000,
+          },
+          {
+            id: 2,
+            status: 'open',
+            meta: { team: { id: 6 } },
+            last_activity_at: 2000,
+          },
+        ],
+        chatSortFilter: 'last_activity_at_desc',
+        appliedFilters: [],
+      };
+
+      const rootGetters = {
+        ...mockRootGetters,
+        getCurrentAccount: {
+          id: 1,
+          role: 'agent',
+          permissions: [],
+          allowed_team_ids: [5],
+          support_team_member: true,
+        },
+        getCurrentUser: {
+          ...mockRootGetters.getCurrentUser,
+          accounts: [
+            {
+              id: 1,
+              role: 'agent',
+              permissions: [],
+              allowed_team_ids: [5],
+              support_team_member: true,
+            },
+          ],
+        },
+      };
+
+      const result = getters.getFilteredConversations(
+        state,
+        {},
+        {},
+        rootGetters
+      );
+
+      expect(result).toEqual([
+        state.allConversations[1],
+        state.allConversations[0],
+      ]);
+    });
+
     it('filters conversations for custom role with conversation_manage permission', () => {
       const state = {
         allConversations: mockConversations,

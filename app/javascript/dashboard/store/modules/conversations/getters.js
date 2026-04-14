@@ -27,6 +27,7 @@ const getters = {
     const currentUser = rootGetters.getCurrentUser;
     const currentUserId = rootGetters.getCurrentUser.id;
     const currentAccountId = rootGetters.getCurrentAccountId;
+    const currentAccount = rootGetters.getCurrentAccount;
 
     const permissions = getUserPermissions(currentUser, currentAccountId);
     const userRole = getUserRole(currentUser, currentAccountId);
@@ -41,7 +42,8 @@ const getters = {
           conversation,
           userRole,
           permissions,
-          currentUserId
+          currentUserId,
+          currentAccount
         );
 
         return matchesFilterResult && allowedForRole;
@@ -106,6 +108,7 @@ const getters = {
     const currentUser = rootGetters.getCurrentUser;
     const currentUserId = rootGetters.getCurrentUser.id;
     const currentAccountId = rootGetters.getCurrentAccountId;
+    const currentAccount = rootGetters.getCurrentAccount;
 
     const permissions = getUserPermissions(currentUser, currentAccountId);
     const userRole = getUserRole(currentUser, currentAccountId);
@@ -116,7 +119,8 @@ const getters = {
         conversation,
         userRole,
         permissions,
-        currentUserId
+        currentUserId,
+        currentAccount
       );
 
       return shouldFilter && allowedForRole;

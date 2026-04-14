@@ -43,5 +43,54 @@ RSpec.describe Conversations::PermissionFilterService do
         expect(result.count).to eq(2)
       end
     end
+
+    context 'when agent is restricted to specific teams' do
+      let(:allowed_team) { create(:team, account: account) }
+      let(:blocked_team) { create(:team, account: account) }
+      let!(:allowed_conversation) { create(:conversation, :with_team, account: account, inbox: inbox, team: allowed_team) }
+      let!(:blocked_conversation) { create(:conversation, :with_team, account: account, inbox: inbox, team: blocked_team) }
+      let!(:unassigned_team_conversation) { create(:conversation, account: account, inbox: inbox, team: nil) }
+
+      before do
+        agent.account_users.find_by(account: account).update!(allowed_team_ids: [allowed_team.id])
+      end
+
+      it 'returns only conversations from permitted teams' do
+        result = described_class.new(
+          account.conversations.where(inbox_id: inbox.id),
+          agent,
+          account
+        ).perform
+
+        expect(result).to include(allowed_conversation)
+        expect(result).not_to include(blocked_conversation)
+        expect(result).not_to include(unassigned_team_conversation)
+      end
+    end
+
+    context 'when restricted agent belongs to support team' do
+      let(:support_team) { create(:team, account: account, name: 'soporte') }
+      let(:other_team) { create(:team, account: account, name: 'administracion') }
+      let!(:support_conversation) { create(:conversation, :with_team, account: account, inbox: inbox, team: support_team) }
+      let!(:other_conversation) { create(:conversation, :with_team, account: account, inbox: inbox, team: other_team) }
+      let!(:unassigned_team_conversation) { create(:conversation, account: account, inbox: inbox, team: nil) }
+
+      before do
+        create(:team_member, team: support_team, user: agent)
+        agent.account_users.find_by(account: account).update!(allowed_team_ids: [other_team.id])
+      end
+
+      it 'bypasses the team restriction and returns all inbox conversations' do
+        result = described_class.new(
+          account.conversations.where(inbox_id: inbox.id),
+          agent,
+          account
+        ).perform
+
+        expect(result).to include(support_conversation)
+        expect(result).to include(other_conversation)
+        expect(result).to include(unassigned_team_conversation)
+      end
+    end
   end
 end
