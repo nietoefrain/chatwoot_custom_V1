@@ -4,6 +4,7 @@
 #
 #  id                       :bigint           not null, primary key
 #  active_at                :datetime
+#  allowed_team_ids         :bigint           default([]), not null, is an Array
 #  auto_offline             :boolean          default(TRUE), not null
 #  availability             :integer          default("online"), not null
 #  role                     :integer          default("agent")
@@ -27,6 +28,8 @@
 class AccountUser < ApplicationRecord
   include AvailabilityStatusable
 
+  SUPPORT_TEAM_SLUGS = %w[soporte support].freeze
+
   belongs_to :account
   belongs_to :user
   belongs_to :inviter, class_name: 'User', optional: true
@@ -41,6 +44,9 @@ class AccountUser < ApplicationRecord
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
 
   validates :user_id, uniqueness: { scope: :account_id }
+  validate :allowed_teams_belong_to_account
+
+  before_validation :normalize_allowed_team_ids
 
   def create_notification_setting
     setting = user.notification_settings.new(account_id: account.id)
@@ -57,6 +63,25 @@ class AccountUser < ApplicationRecord
     administrator? ? ['administrator'] : ['agent']
   end
 
+  def support_team_member?
+    return false if account.blank?
+
+    user.teams.where(account_id: account.id).any? do |team|
+      SUPPORT_TEAM_SLUGS.include?(team.name.to_s.parameterize)
+    end
+  end
+
+  def restricted_to_teams?
+    allowed_team_ids.present? && !support_team_member?
+  end
+
+  def can_access_team?(team_id)
+    return true unless restricted_to_teams?
+    return false if team_id.blank?
+
+    allowed_team_ids.include?(team_id)
+  end
+
   def push_event_data
     {
       id: id,
@@ -67,6 +92,22 @@ class AccountUser < ApplicationRecord
   end
 
   private
+
+  def normalize_allowed_team_ids
+    self.allowed_team_ids = Array(allowed_team_ids).filter_map do |team_id|
+      team_id.presence&.to_i
+    end.uniq
+  end
+
+  def allowed_teams_belong_to_account
+    return if allowed_team_ids.blank? || account.blank?
+
+    valid_team_ids = account.teams.where(id: allowed_team_ids).pluck(:id)
+    invalid_team_ids = allowed_team_ids - valid_team_ids
+    return if invalid_team_ids.blank?
+
+    errors.add(:allowed_team_ids, 'contains teams that do not belong to the account')
+  end
 
   def notify_creation
     Rails.configuration.dispatcher.dispatch(AGENT_ADDED, Time.zone.now, account: account)

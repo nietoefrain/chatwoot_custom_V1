@@ -15,6 +15,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
       role: new_agent_params['role'],
       availability: new_agent_params['availability'],
       auto_offline: new_agent_params['auto_offline'],
+      allowed_team_ids: new_agent_params['allowed_team_ids'],
       inviter: current_user,
       account: Current.account
     )
@@ -24,7 +25,7 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
 
   def update
     @agent.update!(agent_params.slice(:name).compact)
-    @agent.current_account_user.update!(agent_params.slice(*account_user_attributes).compact)
+    @agent.current_account_user.update!(account_user_params)
   end
 
   def destroy
@@ -68,19 +69,19 @@ class Api::V1::Accounts::AgentsController < Api::V1::Accounts::BaseController
   end
 
   def account_user_attributes
-    [:role, :availability, :auto_offline]
-  end
-
-  def allowed_agent_params
-    [:name, :email, :role, :availability, :auto_offline]
+    %i[role availability auto_offline allowed_team_ids]
   end
 
   def agent_params
-    params.require(:agent).permit(allowed_agent_params)
+    params.require(:agent).permit(:name, :email, :role, :availability, :auto_offline, allowed_team_ids: [])
   end
 
   def new_agent_params
-    params.require(:agent).permit(:email, :name, :role, :availability, :auto_offline)
+    params.require(:agent).permit(:email, :name, :role, :availability, :auto_offline, allowed_team_ids: [])
+  end
+
+  def account_user_params
+    agent_params.slice(*account_user_attributes)
   end
 
   def agents

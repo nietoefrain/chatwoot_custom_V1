@@ -69,5 +69,58 @@ RSpec.describe ConversationPolicy, type: :policy do
         expect(subject).not_to permit(agent_context, conversation)
       end
     end
+
+    context 'when agent is restricted to specific teams' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:allowed_team) { create(:team, account: account) }
+      let(:blocked_team) { create(:team, account: account) }
+
+      before do
+        create(:inbox_member, user: agent, inbox: inbox)
+        agent.account_users.find_by(account: account).update!(allowed_team_ids: [allowed_team.id])
+      end
+
+      it 'allows access to conversations in permitted teams' do
+        conversation = create(:conversation, :with_team, account: account, inbox: inbox, team: allowed_team)
+
+        expect(subject).to permit(agent_context, conversation)
+      end
+
+      it 'denies access to conversations in other teams' do
+        conversation = create(:conversation, :with_team, account: account, inbox: inbox, team: blocked_team)
+
+        expect(subject).not_to permit(agent_context, conversation)
+      end
+
+      it 'denies access to conversations without a team' do
+        conversation = create(:conversation, account: account, inbox: inbox, team: nil)
+
+        expect(subject).not_to permit(agent_context, conversation)
+      end
+    end
+
+    context 'when restricted agent belongs to support team' do
+      let(:inbox) { create(:inbox, account: account) }
+      let(:support_team) { create(:team, account: account, name: 'soporte') }
+      let(:other_team) { create(:team, account: account, name: 'administracion') }
+
+      before do
+        create(:inbox_member, user: agent, inbox: inbox)
+        create(:team_member, team: support_team, user: agent)
+        agent.account_users.find_by(account: account).update!(allowed_team_ids: [other_team.id])
+      end
+
+      it 'allows access to other team conversations in the inbox' do
+        conversation = create(:conversation, :with_team, account: account, inbox: inbox, team: other_team)
+
+        expect(subject).to permit(agent_context, conversation)
+      end
+
+      it 'allows access to unassigned conversations in the inbox' do
+        conversation = create(:conversation, account: account, inbox: inbox, team: nil)
+
+        expect(subject).to permit(agent_context, conversation)
+      end
+    end
   end
 end

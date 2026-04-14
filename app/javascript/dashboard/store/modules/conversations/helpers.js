@@ -62,6 +62,33 @@ export const applyPageFilters = (conversation, filters) => {
   return shouldFilter;
 };
 
+const getConversationTeamId = conversation => {
+  return conversation.meta?.team?.id || conversation.team_id || null;
+};
+
+const passesTeamRestriction = (conversation, currentAccount = {}) => {
+  const {
+    role,
+    allowed_team_ids: allowedTeamIds = [],
+    support_team_member: supportTeamMember = false,
+  } = currentAccount;
+
+  if (role === 'administrator' || supportTeamMember) {
+    return true;
+  }
+
+  if (!allowedTeamIds.length) {
+    return true;
+  }
+
+  const conversationTeamId = getConversationTeamId(conversation);
+  if (!conversationTeamId) {
+    return false;
+  }
+
+  return allowedTeamIds.includes(conversationTeamId);
+};
+
 /**
  * Filters conversations based on user role and permissions
  *
@@ -69,14 +96,20 @@ export const applyPageFilters = (conversation, filters) => {
  * @param {string} role - The user's role (administrator, agent, etc.)
  * @param {Array<string>} permissions - List of permission strings the user has
  * @param {number|string} currentUserId - The ID of the current user
+ * @param {Object} currentAccount - The current user's account membership data
  * @returns {boolean} - Whether the user has permissions to access this conversation
  */
 export const applyRoleFilter = (
   conversation,
   role,
   permissions,
-  currentUserId
+  currentUserId,
+  currentAccount = {}
 ) => {
+  if (!passesTeamRestriction(conversation, currentAccount)) {
+    return false;
+  }
+
   // the role === "agent" check is typically not correct on it's own
   // the backend handles this by checking the custom_role_id at the user model
   // here however, the `getUserRole` returns "custom_role" if the id is present,
