@@ -10,6 +10,15 @@ import CmdBarConversationSnooze from 'dashboard/routes/dashboard/commands/CmdBar
 import { emitter } from 'shared/helpers/mitt';
 import SidepanelSwitch from 'dashboard/components-next/Conversation/SidepanelSwitch.vue';
 import ConversationSidebar from 'dashboard/components/widgets/conversation/ConversationSidebar.vue';
+import { conversationListPageURL } from 'dashboard/helper/URLHelper';
+import {
+  getUserPermissions,
+  getUserRole,
+} from 'dashboard/helper/permissionsHelper';
+import {
+  applyPageFilters,
+  applyRoleFilter,
+} from 'dashboard/store/modules/conversations/helpers';
 
 export default {
   components: {
@@ -72,6 +81,10 @@ export default {
     ...mapGetters({
       chatList: 'getAllConversations',
       currentChat: 'getSelectedChat',
+      currentUser: 'getCurrentUser',
+      currentAccountId: 'getCurrentAccountId',
+      currentAccount: 'getCurrentAccount',
+      chatListFilters: 'getChatListFilters',
     }),
     showConversationList() {
       return this.isOnExpandedLayout ? !this.conversationId : true;
@@ -96,10 +109,45 @@ export default {
       const { is_contact_sidebar_open: isContactSidebarOpen } = this.uiSettings;
       return isContactSidebarOpen;
     },
+    isCurrentChatVisible() {
+      if (!this.conversationId || !this.currentChat?.id) {
+        return true;
+      }
+
+      const permissions = getUserPermissions(
+        this.currentUser,
+        this.currentAccountId
+      );
+      const userRole = getUserRole(this.currentUser, this.currentAccountId);
+      const currentUserId = this.currentUser?.id;
+
+      const allowedForRole = applyRoleFilter(
+        this.currentChat,
+        userRole,
+        permissions,
+        currentUserId,
+        this.currentAccount
+      );
+
+      if (!allowedForRole) {
+        return false;
+      }
+
+      if (!this.chatListFilters || !Object.keys(this.chatListFilters).length) {
+        return true;
+      }
+
+      return applyPageFilters(this.currentChat, this.chatListFilters);
+    },
   },
   watch: {
     conversationId() {
       this.fetchConversationIfUnavailable();
+    },
+    isCurrentChatVisible(isVisible) {
+      if (!isVisible) {
+        this.clearInvalidSelectedConversation();
+      }
     },
   },
 
@@ -159,6 +207,19 @@ export default {
       const conversationId = parseInt(this.conversationId, 10);
       const [chat] = this.chatList.filter(c => c.id === conversationId);
       return chat;
+    },
+    clearInvalidSelectedConversation() {
+      this.$store.dispatch('clearSelectedState');
+      this.$router.replace(
+        conversationListPageURL({
+          accountId: this.accountId,
+          conversationType: this.conversationType,
+          customViewId: this.foldersId,
+          inboxId: this.inboxId,
+          label: this.label,
+          teamId: this.teamId,
+        })
+      );
     },
     setActiveChat() {
       if (this.conversationId) {

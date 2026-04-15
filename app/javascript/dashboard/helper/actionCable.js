@@ -27,6 +27,7 @@ class ActionCableConnector extends BaseActionCableConnector {
       'contact.deleted': this.onContactDelete,
       'contact.updated': this.onContactUpdate,
       'conversation.mentioned': this.onConversationMentioned,
+      'team.changed': this.onTeamChanged,
       'notification.created': this.onNotificationCreated,
       'notification.deleted': this.onNotificationDeleted,
       'notification.updated': this.onNotificationUpdated,
@@ -77,6 +78,10 @@ class ActionCableConnector extends BaseActionCableConnector {
     const { id } = payload;
     if (id) {
       this.app.$store.dispatch('updateConversation', payload);
+      this.app.$store.dispatch(
+        'notifications/syncNotificationPrimaryActor',
+        payload
+      );
     }
     this.fetchConversationStats();
   };
@@ -111,11 +116,28 @@ class ActionCableConnector extends BaseActionCableConnector {
 
   onStatusChange = data => {
     this.app.$store.dispatch('updateConversation', data);
+    this.app.$store.dispatch(
+      'notifications/syncNotificationPrimaryActor',
+      data
+    );
     this.fetchConversationStats();
   };
 
   onConversationUpdated = data => {
     this.app.$store.dispatch('updateConversation', data);
+    this.app.$store.dispatch(
+      'notifications/syncNotificationPrimaryActor',
+      data
+    );
+    this.fetchConversationStats();
+  };
+
+  onTeamChanged = data => {
+    this.app.$store.dispatch('updateConversation', data);
+    this.app.$store.dispatch(
+      'notifications/syncNotificationPrimaryActor',
+      data
+    );
     this.fetchConversationStats();
   };
 

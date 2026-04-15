@@ -32,12 +32,26 @@ class NotificationFinder
 
   def set_up
     find_all_notifications
+    filter_inaccessible_notifications
     filter_snoozed_notifications
     filter_read_notifications
   end
 
   def find_all_notifications
     @notifications = current_user.notifications.where(account_id: @current_account.id)
+  end
+
+  def filter_inaccessible_notifications
+    conversation_ids = @notifications.where(primary_actor_type: 'Conversation').distinct.pluck(:primary_actor_id)
+    return if conversation_ids.blank?
+
+    conversations = Conversation.where(id: conversation_ids).index_by(&:id)
+    visible_conversation_ids = conversation_ids.select do |conversation_id|
+      conversation = conversations[conversation_id]
+      conversation.present? && conversation_policy(conversation).show?
+    end
+
+    @notifications = @notifications.where(primary_actor_type: 'Conversation', primary_actor_id: visible_conversation_ids)
   end
 
   def filter_snoozed_notifications
@@ -54,6 +68,21 @@ class NotificationFinder
 
   def current_page
     params[:page] || 1
+  end
+
+  def conversation_policy(conversation)
+    ConversationPolicy.new(
+      {
+        user: current_user,
+        account: current_account,
+        account_user: account_user
+      },
+      conversation
+    )
+  end
+
+  def account_user
+    @account_user ||= AccountUser.find_by(account_id: current_account.id, user_id: current_user.id)
   end
 
   def sort_order

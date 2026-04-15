@@ -150,6 +150,25 @@ export const actions = {
     commit(types.UPDATE_NOTIFICATION, data);
   },
 
+  syncNotificationPrimaryActor({ state, commit }, primaryActor) {
+    const notification = Object.values(state.records).find(
+      record => record.primary_actor_id === primaryActor.id
+    );
+
+    if (!notification) {
+      return;
+    }
+
+    commit(types.UPDATE_NOTIFICATION, {
+      notification: {
+        id: notification.id,
+        primary_actor: primaryActor,
+      },
+      unread_count: state.meta.unreadCount,
+      count: state.meta.count,
+    });
+  },
+
   addNotification({ commit }, data) {
     commit(types.ADD_NOTIFICATION, data);
   },

@@ -146,6 +146,11 @@ const fetchConversationById = async () => {
   }
 };
 
+const clearInvalidNotificationConversation = () => {
+  store.dispatch('clearSelectedState');
+  router.replace({ name: 'inbox_view' });
+};
+
 const navigateToConversation = (activeIndex, direction) => {
   const isValidPrev = direction === 'prev' && activeIndex > 0;
   const isValidNext =
@@ -178,6 +183,13 @@ watch(
   },
   { immediate: true }
 );
+
+watch(activeNotification, notificationItem => {
+  if (!conversationId.value) return;
+  if (notificationItem) return;
+
+  clearInvalidNotificationConversation();
+});
 
 onMounted(async () => {
   await store.dispatch('agents/get');

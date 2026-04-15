@@ -27,6 +27,7 @@ class NotificationBuilder
     return if notification_type == 'conversation_creation' && !user_subscribed_to_notification?
     # skip notifications for blocked conversations except for user mentions
     return if primary_actor.contact.blocked? && notification_type != 'conversation_mention'
+    return unless user_can_access_primary_actor?
 
     user.notifications.create!(
       notification_type: notification_type,
@@ -35,5 +36,18 @@ class NotificationBuilder
       # secondary_actor is secondary_actor if present, else current_user
       secondary_actor: secondary_actor || current_user
     )
+  end
+
+  def user_can_access_primary_actor?
+    return true unless primary_actor.is_a?(Conversation)
+
+    ConversationPolicy.new(
+      {
+        user: user,
+        account: account,
+        account_user: user.account_users.find_by(account_id: account.id)
+      },
+      primary_actor
+    ).show?
   end
 end
