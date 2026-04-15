@@ -49,7 +49,7 @@ class ActionService
 
     return unless @agent.present? && @agent.confirmed?
 
-    @conversation.update!(assignee_id: @agent.id)
+    @conversation.update!(assignee_id: @agent.id, team_id: target_team_id_for_agent)
   end
 
   def remove_label(labels)
@@ -101,6 +101,17 @@ class ActionService
 
   def team_belongs_to_account?(team_ids)
     @account.team_ids.include?(team_ids[0])
+  end
+
+  def target_team_id_for_agent
+    current_team_id = @conversation.team_id
+    return current_team_id if current_team_id.present? && agent_team_ids.include?(current_team_id)
+
+    agent_team_ids.first
+  end
+
+  def agent_team_ids
+    @agent_team_ids ||= @account.teams.joins(:team_members).where(team_members: { user_id: @agent.id }).pluck(:id)
   end
 
   def conversation_a_tweet?

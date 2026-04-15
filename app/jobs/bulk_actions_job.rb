@@ -26,7 +26,7 @@ class BulkActionsJob < ApplicationJob
     records.each do |conversation|
       bulk_add_labels(conversation)
       bulk_snoozed_until(conversation)
-      conversation.update(params) if params
+      update_conversation(conversation, params) if params
     end
   end
 
@@ -40,6 +40,16 @@ class BulkActionsJob < ApplicationJob
     return unless params[:fields]
 
     params[:fields].delete_if { |key, value| value.nil? && key == 'status' }
+  end
+
+  def update_conversation(conversation, params)
+    update_params = params.to_h.symbolize_keys
+    assign_agent(conversation, update_params.delete(:assignee_id)) if update_params.key?(:assignee_id)
+    conversation.update!(update_params) if update_params.present?
+  end
+
+  def assign_agent(conversation, assignee_id)
+    ActionService.new(conversation).assign_agent([assignee_id])
   end
 
   def bulk_add_labels(conversation)

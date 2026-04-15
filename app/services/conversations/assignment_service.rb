@@ -14,6 +14,7 @@ class Conversations::AssignmentService
   attr_reader :conversation, :assignee_id, :assignee_type
 
   def assign_agent
+    conversation.team = target_team_for_assignee if should_update_team_for_assignee?
     conversation.assignee = assignee
     conversation.assignee_agent_bot = nil
     conversation.save!
@@ -31,6 +32,23 @@ class Conversations::AssignmentService
 
   def assignee
     @assignee ||= conversation.account.users.find_by(id: assignee_id)
+  end
+
+  def assignee_teams
+    @assignee_teams ||= conversation.account.teams.joins(:team_members).where(team_members: { user_id: assignee.id })
+  end
+
+  def target_team_for_assignee
+    return conversation.team if conversation.team.present? && assignee_teams.exists?(id: conversation.team_id)
+
+    assignee_teams.first
+  end
+
+  def should_update_team_for_assignee?
+    return false if assignee.blank?
+    return false if assignee_teams.blank?
+
+    target_team_for_assignee.present? && target_team_for_assignee != conversation.team
   end
 
   def agent_bot
