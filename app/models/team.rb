@@ -5,6 +5,7 @@
 #  id                :bigint           not null, primary key
 #  allow_auto_assign :boolean          default(TRUE)
 #  description       :text
+#  is_support_team   :boolean          default(FALSE), not null
 #  name              :string           not null
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
@@ -64,6 +65,10 @@ class Team < ApplicationRecord
       id: id,
       name: name
     }
+  end
+
+  def support_team?
+    is_support_team
   end
 end
 

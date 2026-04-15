@@ -28,8 +28,6 @@
 class AccountUser < ApplicationRecord
   include AvailabilityStatusable
 
-  SUPPORT_TEAM_SLUGS = %w[soporte support].freeze
-
   belongs_to :account
   belongs_to :user
   belongs_to :inviter, class_name: 'User', optional: true
@@ -66,9 +64,7 @@ class AccountUser < ApplicationRecord
   def support_team_member?
     return false if account.blank?
 
-    user.teams.where(account_id: account.id).any? do |team|
-      SUPPORT_TEAM_SLUGS.include?(team.name.to_s.parameterize)
-    end
+    user.teams.where(account_id: account.id).any?(&:support_team?)
   end
 
   def restricted_to_teams?
