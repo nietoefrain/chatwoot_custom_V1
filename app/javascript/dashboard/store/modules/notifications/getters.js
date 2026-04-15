@@ -1,38 +1,20 @@
-import { sortComparator } from './helpers';
+import { isAccessibleNotification, sortComparator } from './helpers';
 import camelcaseKeys from 'camelcase-keys';
-import {
-  getUserPermissions,
-  getUserRole,
-} from '../../../helper/permissionsHelper';
-import { applyRoleFilter } from '../conversations/helpers';
 
 const filterAccessibleNotifications = (records, rootGetters) => {
   const currentUser = rootGetters.getCurrentUser;
   const currentAccountId = rootGetters.getCurrentAccountId;
   const currentAccount = rootGetters.getCurrentAccount;
-  const currentUserId = currentUser?.id;
 
   if (!currentUser || !currentAccountId) {
     return records;
   }
 
-  const permissions = getUserPermissions(currentUser, currentAccountId);
-  const userRole = getUserRole(currentUser, currentAccountId);
-
   return records.filter(notification => {
-    if (notification.primary_actor_type !== 'Conversation') {
-      return true;
-    }
-
-    if (!notification.primary_actor) {
-      return false;
-    }
-
-    return applyRoleFilter(
-      notification.primary_actor,
-      userRole,
-      permissions,
-      currentUserId,
+    return isAccessibleNotification(
+      notification,
+      currentUser,
+      currentAccountId,
       currentAccount
     );
   });

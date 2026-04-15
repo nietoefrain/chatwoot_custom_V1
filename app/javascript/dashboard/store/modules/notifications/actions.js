@@ -1,5 +1,6 @@
 import types from '../../mutation-types';
 import NotificationsAPI from '../../../api/notifications';
+import { isAccessibleNotification, isOwnedInboxNotification } from './helpers';
 
 export const actions = {
   get: async ({ commit }, { page = 1 } = {}) => {
@@ -150,12 +151,40 @@ export const actions = {
     commit(types.UPDATE_NOTIFICATION, data);
   },
 
-  syncNotificationPrimaryActor({ state, commit }, primaryActor) {
+  syncNotificationPrimaryActor({ state, commit, rootGetters }, primaryActor) {
     const notification = Object.values(state.records).find(
-      record => record.primary_actor_id === primaryActor.id
+      record => record.primary_actor?.id === primaryActor.id
     );
 
     if (!notification) {
+      return;
+    }
+
+    const updatedNotification = {
+      ...notification,
+      primary_actor: primaryActor,
+    };
+
+    const isAccessible = isAccessibleNotification(
+      updatedNotification,
+      rootGetters.getCurrentUser,
+      rootGetters.getCurrentAccountId,
+      rootGetters.getCurrentAccount
+    );
+
+    const isOwnedByCurrentUser = isOwnedInboxNotification(
+      updatedNotification,
+      rootGetters.getCurrentUser
+    );
+
+    if (!isAccessible || !isOwnedByCurrentUser) {
+      commit(types.DELETE_NOTIFICATION, {
+        notification,
+        unread_count: notification.read_at
+          ? state.meta.unreadCount
+          : state.meta.unreadCount - 1,
+        count: state.meta.count - 1,
+      });
       return;
     }
 
