@@ -15,10 +15,7 @@ import {
   getUserPermissions,
   getUserRole,
 } from 'dashboard/helper/permissionsHelper';
-import {
-  applyPageFilters,
-  applyRoleFilter,
-} from 'dashboard/store/modules/conversations/helpers';
+import { applyRoleFilter } from 'dashboard/store/modules/conversations/helpers';
 
 export default {
   components: {
@@ -84,7 +81,6 @@ export default {
       currentUser: 'getCurrentUser',
       currentAccountId: 'getCurrentAccountId',
       currentAccount: 'getCurrentAccount',
-      chatListFilters: 'getChatListFilters',
     }),
     showConversationList() {
       return this.isOnExpandedLayout ? !this.conversationId : true;
@@ -121,23 +117,13 @@ export default {
       const userRole = getUserRole(this.currentUser, this.currentAccountId);
       const currentUserId = this.currentUser?.id;
 
-      const allowedForRole = applyRoleFilter(
+      return applyRoleFilter(
         this.currentChat,
         userRole,
         permissions,
         currentUserId,
         this.currentAccount
       );
-
-      if (!allowedForRole) {
-        return false;
-      }
-
-      if (!this.chatListFilters || !Object.keys(this.chatListFilters).length) {
-        return true;
-      }
-
-      return applyPageFilters(this.currentChat, this.chatListFilters);
     },
   },
   watch: {
