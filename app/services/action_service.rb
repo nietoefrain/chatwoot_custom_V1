@@ -41,7 +41,9 @@ class ActionService
   end
 
   def assign_agent(agent_ids = [])
-    return @conversation.update!(assignee_id: nil) if agent_ids[0] == 'nil'
+    first_agent_id = agent_ids[0]
+    should_unassign = agent_ids.blank? || first_agent_id.blank? || %w[nil 0].include?(first_agent_id.to_s)
+    return @conversation.update!(assignee_id: nil) if should_unassign
 
     return unless agent_belongs_to_inbox?(agent_ids)
 
