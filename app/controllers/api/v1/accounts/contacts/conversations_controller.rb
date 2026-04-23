@@ -9,7 +9,8 @@ class Api::V1::Accounts::Contacts::ConversationsController < Api::V1::Accounts::
     conversations = Conversations::PermissionFilterService.new(
       conversations,
       Current.user,
-      Current.account
+      Current.account,
+      include_historical_team_conversations: true
     ).perform
 
     @conversations = conversations.order(last_activity_at: :desc).limit(20)

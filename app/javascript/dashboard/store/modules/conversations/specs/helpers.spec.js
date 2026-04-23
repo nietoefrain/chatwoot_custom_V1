@@ -126,6 +126,32 @@ describe('Conversation Helpers', () => {
       ).toBe(false);
     });
 
+    it('returns true for restricted agents when the conversation belongs to an allowed historical team', () => {
+      expect(
+        applyRoleFilter(
+          {
+            meta: {
+              assignee: null,
+              team: {
+                id: 6,
+              },
+            },
+            additional_attributes: {
+              historical_team_ids: [3, 5, 7],
+            },
+          },
+          'agent',
+          [],
+          1,
+          {
+            role: 'agent',
+            allowed_team_ids: [5],
+            support_team_member: false,
+          }
+        )
+      ).toBe(true);
+    });
+
     it('returns true for support team members even when allowed_team_ids is present', () => {
       expect(
         applyRoleFilter(conversationForSalesTeam, 'agent', [], 1, {

@@ -52,6 +52,8 @@
 #
 
 class Conversation < ApplicationRecord
+  HISTORICAL_TEAM_IDS_KEY = 'historical_team_ids'.freeze
+
   include Labelable
   include LlmFormattable
   include AssignmentHandler
@@ -115,6 +117,7 @@ class Conversation < ApplicationRecord
   has_many :reporting_events, dependent: :destroy_async
 
   before_save :ensure_snooze_until_reset
+  before_save :track_historical_team_ids
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
 
@@ -216,7 +219,28 @@ class Conversation < ApplicationRecord
     dispatcher_dispatch(CONVERSATION_UPDATED, previous_changes)
   end
 
+  def historical_team_ids
+    normalize_team_ids(additional_attributes&.dig(HISTORICAL_TEAM_IDS_KEY))
+  end
+
+  def associated_with_any_team?(team_ids)
+    historical_team_ids.intersect?(normalize_team_ids(team_ids))
+  end
+
   private
+
+  def track_historical_team_ids
+    return unless will_save_change_to_team_id?
+
+    previous_team_id, current_team_id = team_id_change_to_be_saved
+    tracked_team_ids = historical_team_ids | normalize_team_ids([previous_team_id, current_team_id])
+
+    self.additional_attributes = additional_attributes.merge(HISTORICAL_TEAM_IDS_KEY => tracked_team_ids)
+  end
+
+  def normalize_team_ids(team_ids)
+    Array(team_ids).filter_map { |tracked_team_id| tracked_team_id.presence&.to_i }.uniq
+  end
 
   def execute_after_update_commit_callbacks
     handle_resolved_status_change

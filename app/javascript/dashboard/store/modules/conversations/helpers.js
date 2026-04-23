@@ -66,6 +66,19 @@ const getConversationTeamId = conversation => {
   return conversation.meta?.team?.id || conversation.team_id || null;
 };
 
+const getConversationHistoricalTeamIds = conversation => {
+  const historicalTeamIds =
+    conversation.additional_attributes?.historical_team_ids || [];
+
+  if (!Array.isArray(historicalTeamIds)) {
+    return [];
+  }
+
+  return historicalTeamIds
+    .map(teamId => Number(teamId))
+    .filter(teamId => Number.isInteger(teamId));
+};
+
 const passesTeamRestriction = (conversation, currentAccount = {}) => {
   const {
     role,
@@ -82,11 +95,12 @@ const passesTeamRestriction = (conversation, currentAccount = {}) => {
   }
 
   const conversationTeamId = getConversationTeamId(conversation);
-  if (!conversationTeamId) {
-    return false;
+  if (conversationTeamId && allowedTeamIds.includes(conversationTeamId)) {
+    return true;
   }
 
-  return allowedTeamIds.includes(conversationTeamId);
+  const historicalTeamIds = getConversationHistoricalTeamIds(conversation);
+  return historicalTeamIds.some(teamId => allowedTeamIds.includes(teamId));
 };
 
 /**

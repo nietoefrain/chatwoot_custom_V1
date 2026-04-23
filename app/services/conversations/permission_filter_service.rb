@@ -1,10 +1,11 @@
 class Conversations::PermissionFilterService
-  attr_reader :conversations, :user, :account
+  attr_reader :conversations, :user, :account, :include_historical_team_conversations
 
-  def initialize(conversations, user, account)
+  def initialize(conversations, user, account, include_historical_team_conversations: false)
     @conversations = conversations
     @user = user
     @account = account
+    @include_historical_team_conversations = include_historical_team_conversations
   end
 
   def perform
@@ -19,7 +20,14 @@ class Conversations::PermissionFilterService
     scope = conversations.where(inbox: user.inboxes.where(account_id: account.id))
     return scope unless account_user&.restricted_to_teams?
 
-    scope.where(team_id: account_user.allowed_team_ids)
+    team_scoped_conversations = scope.where(team_id: account_user.allowed_team_ids)
+    return team_scoped_conversations unless include_historical_team_conversations
+
+    historical_team_conversation_ids = scope.select do |conversation|
+      conversation.associated_with_any_team?(account_user.allowed_team_ids)
+    end.map(&:id)
+
+    team_scoped_conversations.or(scope.where(id: historical_team_conversation_ids))
   end
 
   def account_user

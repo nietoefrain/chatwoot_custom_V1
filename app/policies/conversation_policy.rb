@@ -17,7 +17,7 @@ class ConversationPolicy < ApplicationPolicy
     return false unless inbox_access? || team_access?
     return true unless account_user&.restricted_to_teams?
 
-    account_user.can_access_team?(record.team_id)
+    account_user.can_access_team?(record.team_id) || record.associated_with_any_team?(account_user.allowed_team_ids)
   end
 
   def administrator?

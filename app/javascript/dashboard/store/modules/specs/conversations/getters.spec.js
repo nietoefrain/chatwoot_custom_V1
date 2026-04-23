@@ -473,6 +473,61 @@ describe('#getters', () => {
       expect(result).toEqual([state.allConversations[0]]);
     });
 
+    it('keeps conversations from historical teams for restricted agents', () => {
+      const state = {
+        allConversations: [
+          {
+            id: 1,
+            status: 'open',
+            meta: { team: { id: 6 } },
+            additional_attributes: { historical_team_ids: [4, 5] },
+            last_activity_at: 1000,
+          },
+          {
+            id: 2,
+            status: 'open',
+            meta: { team: { id: 6 } },
+            additional_attributes: { historical_team_ids: [4] },
+            last_activity_at: 2000,
+          },
+        ],
+        chatSortFilter: 'last_activity_at_desc',
+        appliedFilters: [],
+      };
+
+      const rootGetters = {
+        ...mockRootGetters,
+        getCurrentAccount: {
+          id: 1,
+          role: 'agent',
+          permissions: [],
+          allowed_team_ids: [5],
+          support_team_member: false,
+        },
+        getCurrentUser: {
+          ...mockRootGetters.getCurrentUser,
+          accounts: [
+            {
+              id: 1,
+              role: 'agent',
+              permissions: [],
+              allowed_team_ids: [5],
+              support_team_member: false,
+            },
+          ],
+        },
+      };
+
+      const result = getters.getFilteredConversations(
+        state,
+        {},
+        {},
+        rootGetters
+      );
+
+      expect(result).toEqual([state.allConversations[0]]);
+    });
+
     it('does not restrict support team members in all conversations', () => {
       const state = {
         allConversations: [
