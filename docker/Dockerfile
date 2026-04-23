@@ -4,8 +4,10 @@ FROM ruby:3.4.4-alpine3.21 AS pre-builder
 
 ARG NODE_VERSION="24.13.0"
 ARG PNPM_VERSION="10.2.0"
+ARG SOURCE_COMMIT="unknown"
 ENV NODE_VERSION=${NODE_VERSION}
 ENV PNPM_VERSION=${PNPM_VERSION}
+ENV SOURCE_COMMIT=${SOURCE_COMMIT}
 
 # ARG default to production settings
 # For development docker-compose file overrides ARGS
@@ -86,8 +88,11 @@ RUN if [ "$RAILS_ENV" = "production" ]; then \
   && rm -rf spec node_modules tmp/cache; \
   fi
 
-# Generate .git_sha file with current commit hash
-RUN git rev-parse HEAD > /app/.git_sha
+# Generate .git_sha from git metadata when available, or from the provided build arg.
+RUN if [ -d .git ]; then \
+  git rev-parse HEAD > /app/.git_sha; \
+  else printf "%s" "$SOURCE_COMMIT" > /app/.git_sha; \
+  fi
 
 # Remove unnecessary files
 RUN rm -rf /gems/ruby/3.4.0/cache/*.gem \
@@ -100,8 +105,10 @@ FROM ruby:3.4.4-alpine3.21
 
 ARG NODE_VERSION="24.13.0"
 ARG PNPM_VERSION="10.2.0"
+ARG SOURCE_COMMIT="unknown"
 ENV NODE_VERSION=${NODE_VERSION}
 ENV PNPM_VERSION=${PNPM_VERSION}
+ENV SOURCE_COMMIT=${SOURCE_COMMIT}
 
 ARG BUNDLE_WITHOUT="development:test"
 ENV BUNDLE_WITHOUT ${BUNDLE_WITHOUT}
