@@ -47,6 +47,10 @@ module Whatsapp::IncomingMessageServiceHelpers
     %w[reaction ephemeral unsupported request_welcome].include?(message_type)
   end
 
+  def sticker_message_type?(message_type)
+    message_type == 'sticker'
+  end
+
   def processed_waid(waid)
     Whatsapp::PhoneNumberNormalizationService.new(inbox).normalize_and_find_contact_by_provider(waid, :cloud)
   end
@@ -57,6 +61,18 @@ module Whatsapp::IncomingMessageServiceHelpers
 
   def log_error(message)
     Rails.logger.warn "Whatsapp Error: #{message['errors'][0]['title']} - contact: #{message['from']}"
+  end
+
+  def log_discarded_sticker_message(message)
+    from = message[:from] || message['from'] || 'unknown'
+    waid = @processed_params.dig(:contacts, 0, :wa_id) ||
+           @processed_params.dig('contacts', 0, 'wa_id') ||
+           from
+    message_id = message[:id] || message['id'] || 'unknown'
+
+    Rails.logger.info(
+      "Discarded WhatsApp sticker message from=#{from} waid=#{waid} message_id=#{message_id}"
+    )
   end
 
   def process_in_reply_to(message)

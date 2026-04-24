@@ -27,6 +27,10 @@ class Whatsapp::IncomingMessageBaseService
     # We don't support reactions & ephemeral message now, we need to skip processing the message
     # if the webhook event is a reaction or an ephermal message or an unsupported message.
     return if unprocessable_message_type?(message_type)
+    if sticker_message_type?(message_type)
+      log_discarded_sticker_message(messages_data.first)
+      return
+    end
 
     # Multiple webhook events can be received for the same message due to
     # misconfigurations in the Meta business manager account.
