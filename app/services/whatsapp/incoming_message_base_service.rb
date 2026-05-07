@@ -43,8 +43,10 @@ class Whatsapp::IncomingMessageBaseService
     return unless @contact
 
     ActiveRecord::Base.transaction do
-      set_conversation
-      create_messages
+      @contact_inbox.with_lock do
+        set_conversation
+        create_messages
+      end
     end
   end
 

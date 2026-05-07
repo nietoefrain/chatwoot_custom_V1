@@ -42,6 +42,15 @@ describe Whatsapp::IncomingMessageWhatsappCloudService do
         expect_message_has_attachment
       end
 
+      it 'serializes conversation creation for initial media messages from the same contact' do
+        stub_media_url_request
+        stub_sample_png_request
+
+        expect_any_instance_of(ContactInbox).to receive(:with_lock).and_call_original
+
+        described_class.new(inbox: whatsapp_channel.inbox, params: params).perform
+      end
+
       it 'increments reauthorization count if fetching attachment fails' do
         stub_request(
           :get,
