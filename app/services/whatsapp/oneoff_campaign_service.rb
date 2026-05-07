@@ -58,7 +58,7 @@ class Whatsapp::OneoffCampaignService
       return
     end
 
-    send_whatsapp_template_message(to: contact.phone_number)
+    send_whatsapp_template_message(to: contact.phone_number, contact: contact)
   end
 
   def process_audience(audience_labels)
@@ -70,10 +70,10 @@ class Whatsapp::OneoffCampaignService
     Rails.logger.info "Campaign #{campaign.id} processing completed"
   end
 
-  def send_whatsapp_template_message(to:)
+  def send_whatsapp_template_message(to:, contact:)
     processor = Whatsapp::TemplateProcessorService.new(
       channel: channel,
-      template_params: campaign.template_params
+      template_params: resolved_template_params(contact)
     )
 
     name, namespace, lang_code, processed_parameters = processor.call
@@ -92,5 +92,22 @@ class Whatsapp::OneoffCampaignService
     Rails.logger.error "Backtrace: #{e.backtrace.first(5).join('\n')}"
     # continue processing remaining contacts
     nil
+  end
+
+  def resolved_template_params(contact)
+    render_liquid_value(campaign.template_params.deep_dup, contact)
+  end
+
+  def render_liquid_value(value, contact)
+    case value
+    when String
+      Liquid::CampaignTemplateService.new(campaign: campaign, contact: contact).call(value)
+    when Hash
+      value.transform_values { |item| render_liquid_value(item, contact) }
+    when Array
+      value.map { |item| render_liquid_value(item, contact) }
+    else
+      value
+    end
   end
 end

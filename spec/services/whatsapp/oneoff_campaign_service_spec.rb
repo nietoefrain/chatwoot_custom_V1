@@ -114,6 +114,60 @@ describe Whatsapp::OneoffCampaignService do
         described_class.new(campaign: campaign).perform
       end
 
+      context 'when template params include liquid variables' do
+        let(:template_params) do
+          {
+            'name' => 'ticket_status_updated',
+            'namespace' => '23423423_2342423_324234234_2343224',
+            'category' => 'UTILITY',
+            'language' => 'en',
+            'processed_params' => {
+              'body' => {
+                'name' => '{{contact.name}}',
+                'amount_due' => '{{contact.custom_attributes.amount_due}}',
+                'service_name' => '{{contact.custom_attributes.service_name}}',
+                'due_date' => '{{contact.custom_attributes.due_date}}'
+              }
+            }
+          }
+        end
+
+        it 'renders liquid values for each contact before sending the template' do
+          contact = create(
+            :contact,
+            :with_phone_number,
+            account: account,
+            name: 'jane doe',
+            custom_attributes: {
+              amount_due: '42.50',
+              service_name: 'Fiber 600',
+              due_date: '2026-05-10'
+            }
+          )
+          contact.update_labels([label1.title])
+
+          expect(whatsapp_channel).to receive(:send_template).with(
+            contact.phone_number,
+            hash_including(
+              parameters: array_including(
+                hash_including(
+                  type: 'body',
+                  parameters: array_including(
+                    hash_including(type: 'text', parameter_name: 'name', text: 'Jane Doe'),
+                    hash_including(type: 'text', parameter_name: 'amount_due', text: '42.50'),
+                    hash_including(type: 'text', parameter_name: 'service_name', text: 'Fiber 600'),
+                    hash_including(type: 'text', parameter_name: 'due_date', text: '2026-05-10')
+                  )
+                )
+              )
+            ),
+            nil
+          )
+
+          described_class.new(campaign: campaign).perform
+        end
+      end
+
       it 'sends template message with correct parameters' do
         contact = create(:contact, :with_phone_number, account: account)
         contact.update_labels([label1.title])

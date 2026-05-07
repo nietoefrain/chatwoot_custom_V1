@@ -103,5 +103,60 @@ describe Liquid::CampaignTemplateService do
         expect(result).to include("Account: #{account.name}")
       end
     end
+
+    context 'with contact custom attributes' do
+      let(:contact) do
+        create(
+          :contact,
+          account: account,
+          custom_attributes: {
+            amount_due: '42.50',
+            service_name: 'Fiber 600',
+            due_date: '2026-05-10'
+          }
+        )
+      end
+      let(:message_content) do
+        'Amount: {{contact.custom_attributes.amount_due}}, ' \
+          'Service: {{contact.custom_attributes.service_name}}, ' \
+          'Due date: {{contact.custom_attributes.due_date}}'
+      end
+
+      it 'processes custom_attributes liquid alias' do
+        expect(template_service.call(message_content)).to eq('Amount: 42.50, Service: Fiber 600, Due date: 2026-05-10')
+      end
+    end
+
+    context 'with extended contact attributes' do
+      let(:contact) do
+        create(
+          :contact,
+          account: account,
+          name: 'Jane Doe',
+          email: 'jane@example.com',
+          phone_number: '+1234567890',
+          middle_name: 'Marie',
+          last_name: 'Smith',
+          additional_attributes: {
+            city: 'Santiago',
+            country: 'Chile',
+            country_code: 'CL',
+            company_name: 'NetworkSpeed',
+            description: 'VIP customer'
+          }
+        )
+      end
+      let(:message_content) do
+        'Hi {{contact.name}} {{contact.middle_name}} {{contact.last_name}}, ' \
+          '{{contact.email}} {{contact.phone_number}} {{contact.city}} {{contact.country}} ' \
+          '{{contact.country_code}} {{contact.company_name}} {{contact.biography}}'
+      end
+
+      it 'processes default and additional contact fields' do
+        expect(template_service.call(message_content)).to eq(
+          'Hi Jane Doe Marie Smith, jane@example.com +1234567890 Santiago Chile CL NetworkSpeed VIP customer'
+        )
+      end
+    end
   end
 end
